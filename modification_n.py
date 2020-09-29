@@ -473,6 +473,27 @@ class Cell:
         self.time += self.timestep
         return self.concentrations
 
+    def euler_heun(self):
+        error = 1e-6
+        predicted_concentrations = {}
+        gradient1 = self.grad_calc(self.concentrations)  # gradient at t_n
+        for i, j in zip(self.concentrations, gradient1):
+            predicted_concentrations[i] = self.concentrations[i] + self.timestep * gradient1[i]
+        gradient2 = self.grad_calc(predicted_concentrations)  # gradient as extrapolated to t_(n+1)
+        gradient_difference = None
+        for i, j in zip(gradient1, gradient2):
+            value = gradient2[i] - gradient1[i]
+            if gradient_difference is None:
+                gradient_difference = value
+            else:
+                gradient_difference = min(abs(value), abs(gradient_difference))
+
+        self.timestep = 2 * error / gradient_difference
+
+        self.time += self.timestep
+        return self.concentrations
+
+
     def method_setup(self):
         if self.method == 'euler':
             self.method = self.euler
