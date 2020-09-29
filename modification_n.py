@@ -262,7 +262,10 @@ class Application(tkinter.ttk.Notebook):
             cell.run()
             # progress = tk.Toplevel(self)
             # progress_bar = tkinter.ttk.Progressbar(progress, mode='indeterminate')
-
+            if self.plot_tuple == (0,):
+                tkinter.messagebox.showinfo(message='calculation done\n'
+                                                    ' data saved as ' + self.name + '.dat', parent=self)
+                return
             tkinter.messagebox.showinfo(message='calculation done\n'
                                                 ' data saved as '+self.name+'.dat\n'
                                                 'Plotting...', parent=self)
@@ -395,24 +398,14 @@ class Cell:
         for reaction in self.reactions:
             in_rate = -reaction.k
             out_rate = reaction.k
-            reactant_list = []
-            product_list = []
 
-            for reactant in reaction.reactants():
-                c = counter(reactant)
-                reactant_list.append(c[0])
-                conc, coef = concentrations_dict[c[0]], c[1]
+            for reactant in reaction.reactant_list():
+                conc, coef = concentrations_dict[reactant[0]], reactant[1]
                 in_rate = in_rate * (coef * (conc ** coef))
                 out_rate = out_rate * (conc ** coef)
+                delta[reactant[0]] += in_rate
 
-            for product in reaction.products():
-                d = counter(product)
-                product_list.append([d[0], d[1]])
-
-            for reactant in reactant_list:
-                delta[reactant] += in_rate
-
-            for product in product_list:
+            for product in reaction.product_list():
                 delta[product[0]] += product[1] * out_rate
         return delta
 
