@@ -325,14 +325,14 @@ class Application(tkinter.ttk.Notebook):
         def changer(label):
             if data_entry.get() == 'Custom...':
                 new_de = tkinter.simpledialog.askinteger("Result recording", "Save results in this number of steps",
-                                                             parent=set_simulation,
-                                                             minvalue=1)
+                                                        parent=set_simulation,
+                                                        minvalue=1)
                 data_entry.set(new_de)
 
             if timestep_entry.get() == 'Custom...':
                 new_te = tkinter.simpledialog.askfloat("Timestep", "Set integration step",
-                                                           parent=set_simulation,
-                                                           minvalue=0)
+                                                        parent=set_simulation,
+                                                        minvalue=0)
                 timestep_entry.set(new_te)
 
             try:
@@ -384,12 +384,13 @@ class Cell:
         self.time = 0
         self.timestep = timestep
         self.skip = skip
-        self.delta = {}
+        # delta = {}
         self.method = method.get()
 
     def grad_calc(self, concentrations_dict):  # calculates gradient, equivalent to k1 in Runge-Kutta
+        delta = {}
         for item in concentrations_dict:
-            self.delta[item] = 0
+            delta[item] = 0
 
         for reaction in self.reactions:
             in_rate = -reaction.k
@@ -409,18 +410,18 @@ class Cell:
                 product_list.append([d[0], d[1]])
 
             for reactant in reactant_list:
-                self.delta[reactant] += in_rate
+                delta[reactant] += in_rate
 
             for product in product_list:
-                self.delta[product[0]] += product[1] * out_rate
-        return self.delta
+                delta[product[0]] += product[1] * out_rate
+        return delta
 
-    def heun(self): # Heun method (will allow for better convergence)
+    def heun(self):  # Heun method (will allow for better convergence)
         predicted_concentrations = {}
         gradient1 = self.grad_calc(self.concentrations)  # gradient at t_n
         for i, j in zip(self.concentrations, gradient1):
             predicted_concentrations[i] = self.concentrations[i] + self.timestep * gradient1[i]
-        gradient2 = self.grad_calc(predicted_concentrations) # gradient as extrapolated to t_(n+1)
+        gradient2 = self.grad_calc(predicted_concentrations)  # gradient as extrapolated to t_(n+1)
         for i, j, k in zip(self.concentrations, gradient1, gradient2):
             self.concentrations[i] = self.concentrations[i] + \
                                      self.timestep / 2 * \
@@ -452,7 +453,7 @@ class Cell:
         self.time += self.timestep
         return self.concentrations
 
-    def run(self): # generates output
+    def run(self):  # generates output
         from time import time
         t = self.runtime
         aux = 0
@@ -506,6 +507,12 @@ class Reaction:
 
     def products(self):
         return self.name.split('=')[1].split('+')
+
+    def reactant_list(self):
+        return [counter(x) for x in self.reactants()]
+
+    def product_list(self):
+        return [counter(x) for x in self.products()]
 
 
 root = tk.Tk()
