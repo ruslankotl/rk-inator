@@ -253,10 +253,23 @@ class Application(tkinter.ttk.Notebook):
         # start up the system, let the Cell handle maths
 
         def simulation():
+            reactions = [Reaction('A+Y=X+P', 1.34),
+                         Reaction('X+Y=P', 1.6e09),
+                         Reaction('B+X=2X+Z', 8e03),
+                         Reaction('2X=Q', 4e07),
+                         Reaction('Z=Y', 1)]
+
+            concentrations = {'A': 0.06,
+                              'B': 0.06,
+                              'P': 0,
+                              'Q': 0,
+                              'X': 10 ** (-9.8),
+                              'Y': 10 ** (-6.52),
+                              'Z': 10 ** (-7.32)}
             if method.get() == '':
                 tk.messagebox.showinfo(message='Choose the integration method', parent=self)
                 return
-            cell = Cell(self.name, self.reactions, self.concentrations,
+            cell = Cell(self.name, reactions, concentrations,
                         float(runtime_entry.get()), float(timestep_entry.get()),
                         int(data_entry.get()), method)
             cell.run()
@@ -418,6 +431,8 @@ class Cell:
                 conc, coef = concentrations_dict[reactant[0]], reactant[1]
                 in_rate = in_rate * (coef * (conc ** coef))
                 out_rate = out_rate * (conc ** coef)
+
+            for reactant in reaction.reactant_list():
                 delta[reactant[0]] += in_rate
 
             for product in reaction.product_list():
