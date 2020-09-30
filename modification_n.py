@@ -51,7 +51,7 @@ def display_concentrations(window, x, start_index, lst, boo):
     new_checkbutton = tkinter.ttk.Checkbutton(window, text='Plot', variable=boo[x])
     new_checkbutton.grid(row=x + start_index, column=2)
 
-    return new_label, new_entry, new_checkbutton, boo[x], x+1
+    return new_label, new_entry, new_checkbutton, boo[x], x + 1
 
 
 def name_check(name_input):
@@ -183,7 +183,7 @@ class Application(tkinter.ttk.Notebook):
 
                 label2 = tkinter.ttk.Label(set_concentrations, text='Enter the concentrations')
                 label2.grid(row=0, column=0)
-                boo = [x*0 for x in range(len(self.species))]
+                boo = [x * 0 for x in range(len(self.species))]
 
                 for el in range(len(self.species)):
                     boo[el] = tk.IntVar()
@@ -267,15 +267,18 @@ class Application(tkinter.ttk.Notebook):
                                                     ' data saved as ' + self.name + '.dat', parent=self)
                 return
             tkinter.messagebox.showinfo(message='calculation done\n'
-                                                ' data saved as '+self.name+'.dat\n'
-                                                'Plotting...', parent=self)
+                                                ' data saved as ' + self.name + '.dat\n'
+                                                                                'Plotting...', parent=self)
 
             data = np.loadtxt(self.name + '.dat', unpack=True, usecols=self.plot_tuple)
             fig, ax = plt.subplots()
 
-            for sp in range(data.shape[0]-1):
-                ind = self.plot_tuple[sp+1]
-                plt.plot(data[0], data[sp+1], label=self.species[ind-1])
+            for sp in range(data.shape[0] - 1):
+                ind = self.plot_tuple[sp + 1]
+                plt.plot(data[0], data[sp + 1], label=self.species[ind - 1])
+
+            if scale.get() == 'log':
+                plt.yscale('log')
 
             ax.set_xlabel('time / s')
             ax.set_ylabel('concentration / M')
@@ -317,34 +320,46 @@ class Application(tkinter.ttk.Notebook):
         rb_euler.grid(row=0, column=0)
         rb_heun = tkinter.ttk.Radiobutton(integration, text='Heun', variable=method, value='heun')
         rb_heun.grid(row=0, column=1)
-        rb_rk4 = tkinter.ttk.Radiobutton(integration, text='Runge-Kutta', variable=method, value='rk4')
+        rb_rk4 = tkinter.ttk.Radiobutton(integration, text='Runge-Kutta 4', variable=method, value='rk4')
         rb_rk4.grid(row=0, column=2)
+
+        y_scale = tkinter.ttk.LabelFrame(set_simulation, text='y-scale')
+        y_scale.grid(row=5, column=0, columnspan=2)
+
+        scale = tk.StringVar()
+        scale.set('linear')
+
+        y_lin = tkinter.ttk.Radiobutton(y_scale, text='linear', variable=scale, value='linear')
+        y_lin.grid(row=0, column=0)
+        y_log = tkinter.ttk.Radiobutton(y_scale, text='Logarithmic', variable=scale, value='log')
+        y_log.grid(row=0, column=1)
 
         confirm = tkinter.ttk.Button(set_simulation, text='Start!',
                                      command=lambda: simulation())
-        confirm.grid(row=5, column=0, columnspan=2)
+        confirm.grid(row=6, column=0, columnspan=2)
 
         # updates the label with calculation parameters
         def changer(label):
             if data_entry.get() == 'Custom...':
                 new_de = tkinter.simpledialog.askinteger("Result recording", "Save results in this number of steps",
-                                                        parent=set_simulation,
-                                                        minvalue=1)
+                                                         parent=set_simulation,
+                                                         minvalue=1)
                 data_entry.set(new_de)
 
             if timestep_entry.get() == 'Custom...':
                 new_te = tkinter.simpledialog.askfloat("Timestep", "Set integration step",
-                                                        parent=set_simulation,
-                                                        minvalue=0)
+                                                       parent=set_simulation,
+                                                       minvalue=0)
                 timestep_entry.set(new_te)
 
             try:
-                rec_step = float(data_entry.get())*float(timestep_entry.get())
-                data_points = float(runtime_entry.get())/rec_step
+                rec_step = float(data_entry.get()) * float(timestep_entry.get())
+                data_points = float(runtime_entry.get()) / rec_step
 
                 label['text'] = 'Will save every {:.2e} s\n{:.0f} datapoints to record'.format(rec_step, data_points)
             except ValueError:
                 label['text'] = 'Enter your values'
+
         data_entry.bind('<<ComboboxSelected>>', lambda event=None: changer(test))
         timestep_entry.bind('<<ComboboxSelected>>', lambda event=None: changer(test))
 
@@ -433,12 +448,12 @@ class Cell:
         pred2 = {}
         for i, j in zip(self.concentrations, k2):
             pred2[i] = self.concentrations[i] + self.timestep * k2[i] / 2
-            increment[i] += 2*k2[i]
+            increment[i] += 2 * k2[i]
         k3 = self.grad_calc(pred2)
         pred3 = {}
         for i, j in zip(self.concentrations, k3):
             pred3[i] = self.concentrations[i] + self.timestep * k3[i]
-            increment[i] += 2*k3[i]
+            increment[i] += 2 * k3[i]
         k4 = self.grad_calc(pred3)
         for i, j in zip(self.concentrations, k4):
             increment[i] += k4[i]
@@ -474,25 +489,7 @@ class Cell:
         return self.concentrations
 
     def euler_heun(self):
-        error = 1e-6
-        predicted_concentrations = {}
-        gradient1 = self.grad_calc(self.concentrations)  # gradient at t_n
-        for i, j in zip(self.concentrations, gradient1):
-            predicted_concentrations[i] = self.concentrations[i] + self.timestep * gradient1[i]
-        gradient2 = self.grad_calc(predicted_concentrations)  # gradient as extrapolated to t_(n+1)
-        gradient_difference = None
-        for i, j in zip(gradient1, gradient2):
-            value = gradient2[i] - gradient1[i]
-            if gradient_difference is None:
-                gradient_difference = value
-            else:
-                gradient_difference = min(abs(value), abs(gradient_difference))
-
-        self.timestep = 2 * error / gradient_difference
-
-        self.time += self.timestep
-        return self.concentrations
-
+        pass
 
     def method_setup(self):
         if self.method == 'euler':
