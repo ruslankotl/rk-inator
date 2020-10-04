@@ -1,0 +1,23 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+data = np.loadtxt('rkf451.dat', unpack=True)
+
+
+time, a, b, p, q, x, y, z = data
+
+fig, ax = plt.subplots()
+
+plt.plot(time, x, label='X')
+plt.plot(time, y, label='Y')
+plt.plot(time, z, label='Z')
+plt.yscale('log')
+
+ax.set_xlabel('time / s')
+ax.set_ylabel('concentration/M')
+
+ax.legend()
+
+plt.savefig('rkf451.png')
+
+plt.show()
