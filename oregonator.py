@@ -141,7 +141,7 @@ tworeactions = Cell('AtoBtoC', reactions2,concentrations2, 1e-06)
 
 tworeactions.run()'''
 
-data = np.loadtxt('oregonator3.dat', unpack=True)
+data = np.loadtxt('odebu6.dat', unpack=True)
 
 
 time, a, b, p, q, x, y, z = data
@@ -158,6 +158,6 @@ ax.set_ylabel('concentration/M')
 
 ax.legend()
 
-plt.savefig('oregonator3.png')
+plt.savefig('odebu6.png')
 
 plt.show()
