@@ -259,9 +259,16 @@ class Application(tkinter.ttk.Notebook):
             cell = Cell(self.name, self.reactions, self.concentrations,
                         float(runtime_entry.get()), float(timestep_entry.get()),
                         int(data_entry.get()), method)
+
+            progress = tk.Toplevel(self)
+            progress_bar = tkinter.ttk.Progressbar(progress, mode='indeterminate')
+            progress_bar.pack()
+            progress.title('Calculating...')
+
             cell.run()
-            # progress = tk.Toplevel(self)
-            # progress_bar = tkinter.ttk.Progressbar(progress, mode='indeterminate')
+
+            progress.destroy()
+
             if self.plot_tuple == (0,):
                 tkinter.messagebox.showinfo(message='calculation done\n'
                                                     ' data saved as ' + self.name + '.dat', parent=self)
@@ -326,6 +333,8 @@ class Application(tkinter.ttk.Notebook):
         rb_adheun.grid(row=1, column=0)
         rb_rkf45 = tkinter.ttk.Radiobutton(integration, text='RKF45 - not working', variable=method, value='rkf45')
         rb_rkf45.grid(row=1, column=1)
+        rb_bs = tkinter.ttk.Radiobutton(integration, text='Bogacki-Shampine', variable = method, value='bs')
+        rb_bs.grid(row=1, column=2)
 
         y_scale = tkinter.ttk.LabelFrame(set_simulation, text='y-scale')
         y_scale.grid(row=5, column=0, columnspan=2)
@@ -429,6 +438,42 @@ class Cell:
             for product in reaction.product_list():
                 delta[product[0]] += product[1] * out_rate
         return delta
+
+    def bogacki_shampine(self, k4=None, tolerance=1e-12):
+        max_error = 0
+        error = {}
+        if k4:
+            k1=k4
+        else:
+            k1 = self.grad_calc(self.concentrations)
+        pred1 = {}
+        for i, j in zip(self.concentrations, k1):
+            pred1[i] = self.concentrations[i] + self.timestep * k1[i] / 2
+        k2 = self.grad_calc(pred1)
+        pred2 = {}
+        for i, j in zip(self.concentrations, k2):
+            pred2[i] = self.concentrations[i] + self.timestep * k2[i] * 3 / 4
+        k3 = self.grad_calc(pred2)
+        pred3 = {}
+        for i, j, k, l in zip(self.concentrations, k1, k2, k3):
+            pred3[i] = self.concentrations[i] +  self.timestep * (2 * k1[i] + 3 * k2[i] + 4 * k3[i]) / 9
+        k4 = self.grad_calc(pred3)
+        for i, j, k, l in zip(k1, k2, k3, k4):
+            error[i] = abs(self.timestep * (k4[i] / 8 - k3[i] / 9 - k2[i] / 12 + k1[i] * 5 / 72))
+            max_error = max(max_error, error[i])
+            if max_error > tolerance:
+                self.timestep = 0.9 * self.timestep * (tolerance / max_error) ** (1/3)
+                return self.concentrations
+
+        self.concentrations = pred3
+        self.time += self.timestep
+
+        self.timestep = 0.9 * self.timestep * (tolerance / max_error) ** (1/4)
+        return self.concentrations
+
+
+
+
 
     def heun(self):  # Heun method (will allow for better convergence)
         predicted_concentrations = {}
@@ -577,6 +622,8 @@ class Cell:
             self.method = self.runge_kutta4
         elif self.method == 'heun_adaptive':
             self.method = self.heun_adaptive
+        elif self.method == 'bs':
+            self.method = self.bogacki_shampine
         elif self.method == 'rkf45':
             self.method = self.rkf45
         return self.method
